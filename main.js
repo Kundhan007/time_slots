@@ -51,21 +51,21 @@ function updateClock() {
 }
 
 function startTimer() {
-    acquireLock()
+   
 	let { total } = timer.remainingTime;
 	const endTime = Date.parse(new Date()) + total * 1000;
 
 	mainButton.dataset.action = "stop";
 	mainButton.textContent = "stop";
 	mainButton.classList.add("active");
-
+let interval = null;
 	interval = setInterval(function () {
 		timer.remainingTime = getRemainingTime(endTime);
 		updateClock();
 
 		total = timer.remainingTime.total;
 		if (total <= 0) {
-			releaseLock()
+			
 			document.querySelector(`[data-sound="${timer.mode}"]`).play();
 			clearInterval(interval);
 		}
@@ -104,7 +104,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function stopTimer() {
 	clearInterval(interval);
-	releaseLock()
+	
 
 	mainButton.dataset.action = "start";
 	mainButton.textContent = "start";
