@@ -31,7 +31,7 @@ function switchMode(mode) {
 	document
 		.getElementById("js-progress")
 		.setAttribute("max", timer.remainingTime.total);
-	console.log(`var(--${mode})`);
+	
 
 	updateClock();
 }
@@ -49,7 +49,7 @@ function updateClock() {
 }
 
 function startTimer() {
-    
+    acquireLock()
 	let { total } = timer.remainingTime;
 	const endTime = Date.parse(new Date()) + total * 1000;
 
@@ -63,6 +63,7 @@ function startTimer() {
 
 		total = timer.remainingTime.total;
 		if (total <= 0) {
+			releaseLock()
 			document.querySelector(`[data-sound="${timer.mode}"]`).play();
 			clearInterval(interval);
 		}
@@ -101,6 +102,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function stopTimer() {
 	clearInterval(interval);
+	releaseLock()
 
 	mainButton.dataset.action = "start";
 	mainButton.textContent = "start";
@@ -128,3 +130,26 @@ document.addEventListener('DOMContentLoaded', () => {
     switchMode('pomodoro');
   });
 
+let wakeLock = null;
+
+if('wakeLock' in navigator) {
+	//Wake Lock is supported
+	document.getElementById("wakeLockAPIAvailable").innerText = 'screen will not dim';
+} else {
+   document.getElementById("wakeLockAPIAvailable").innerText = 'screen will be dimmed';
+}
+
+async function acquireLock() {
+ wakeLock = await navigator.wakeLock.request("screen");
+ console.log(" Wake Lock is acquired");
+
+ wakeLock.addEventListener('release', () => {
+   console.log('Wake Lock is released');
+ });
+}
+
+function releaseLock() {
+   wakeLock.release().then(() => {
+	console.log("Wake Lock Released");
+   });
+}
