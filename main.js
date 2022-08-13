@@ -49,7 +49,7 @@ function updateClock() {
 }
 
 function startTimer() {
-    document.querySelector(`[data-sound="${timer.mode}"]`).play();
+    
 	let { total } = timer.remainingTime;
 	const endTime = Date.parse(new Date()) + total * 1000;
 
@@ -63,6 +63,7 @@ function startTimer() {
 
 		total = timer.remainingTime.total;
 		if (total <= 0) {
+			document.querySelector(`[data-sound="${timer.mode}"]`).play();
 			clearInterval(interval);
 		}
 	}, 1000);
