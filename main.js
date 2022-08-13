@@ -6,7 +6,7 @@ const timer = {
 	longBreak: 5,
 	longBreakInterval: 4,
 };
-
+let interval;
 const modeButtons = document.querySelector("#js-mode-buttons");
 modeButtons.addEventListener("click", handleMode);
 
@@ -58,8 +58,8 @@ function startTimer() {
 	mainButton.dataset.action = "stop";
 	mainButton.textContent = "stop";
 	mainButton.classList.add("active");
-let interval = null;
-	interval = setInterval(function () {
+
+	 interval = setInterval(function () {
 		timer.remainingTime = getRemainingTime(endTime);
 		updateClock();
 
