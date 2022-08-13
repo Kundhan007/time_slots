@@ -1,3 +1,5 @@
+
+
 const timer = {
 	pomodoro: 15,
 	shortBreak: 10,
@@ -130,26 +132,190 @@ document.addEventListener('DOMContentLoaded', () => {
     switchMode('pomodoro');
   });
 
-let wakeLock = null;
+  var _createClass = (function () {
+	function defineProperties(target, props) {
+		for (var i = 0; i < props.length; i++) {
+			var descriptor = props[i];
+			descriptor.enumerable = descriptor.enumerable || false;
+			descriptor.configurable = true;
+			if ("value" in descriptor) descriptor.writable = true;
+			Object.defineProperty(target, descriptor.key, descriptor);
+		}
+	}
+	return function (Constructor, protoProps, staticProps) {
+		if (protoProps) defineProperties(Constructor.prototype, protoProps);
+		if (staticProps) defineProperties(Constructor, staticProps);
+		return Constructor;
+	};
+})();
 
-if('wakeLock' in navigator) {
-	//Wake Lock is supported
-	document.getElementById("wakeLockAPIAvailable").innerText = 'screen will not dim';
-} else {
-   document.getElementById("wakeLockAPIAvailable").innerText = 'screen will be dimmed';
+
+
+function _classCallCheck(instance, Constructor) {
+	if (!(instance instanceof Constructor)) {
+		throw new TypeError("Cannot call a class as a function");
+	}
 }
+var nativeWakeLock = function nativeWakeLock() {
+	return "wakeLock" in navigator;
+};
+  var NoSleep = (function () {
+	function NoSleep() {
+		var _this = this;
+
+		_classCallCheck(this, NoSleep);
+
+		this.enabled = false;
+		if (nativeWakeLock()) {
+			this._wakeLock = null;
+			var handleVisibilityChange = function handleVisibilityChange() {
+				if (
+					_this._wakeLock !== null &&
+					document.visibilityState === "visible"
+				) {
+					_this.enable();
+				}
+			};
+			document.addEventListener(
+				"visibilitychange",
+				handleVisibilityChange
+			);
+			document.addEventListener(
+				"fullscreenchange",
+				handleVisibilityChange
+			);
+		} else if (oldIOS()) {
+			this.noSleepTimer = null;
+		} else {
+			// Set up no sleep video element
+			this.noSleepVideo = document.createElement("video");
+
+			this.noSleepVideo.setAttribute("title", "No Sleep");
+			this.noSleepVideo.setAttribute("playsinline", "");
+
+			this._addSourceToVideo(this.noSleepVideo, "webm", webm);
+			this._addSourceToVideo(this.noSleepVideo, "mp4", mp4);
+
+			this.noSleepVideo.addEventListener("loadedmetadata", function () {
+				if (_this.noSleepVideo.duration <= 1) {
+					// webm source
+					_this.noSleepVideo.setAttribute("loop", "");
+				} else {
+					// mp4 source
+					_this.noSleepVideo.addEventListener(
+						"timeupdate",
+						function () {
+							if (_this.noSleepVideo.currentTime > 0.5) {
+								_this.noSleepVideo.currentTime = Math.random();
+							}
+						}
+					);
+				}
+			});
+		}
+	}
+
+	_createClass(NoSleep, [
+		{
+			key: "_addSourceToVideo",
+			value: function _addSourceToVideo(element, type, dataURI) {
+				var source = document.createElement("source");
+				source.src = dataURI;
+				source.type = "video/" + type;
+				element.appendChild(source);
+			},
+		},
+		{
+			key: "enable",
+			value: function enable() {
+				var _this2 = this;
+
+				if (nativeWakeLock()) {
+					return navigator.wakeLock
+						.request("screen")
+						.then(function (wakeLock) {
+							_this2._wakeLock = wakeLock;
+							_this2.enabled = true;
+							console.log("Wake Lock active.");
+							_this2._wakeLock.addEventListener("release", function () {
+								// ToDo: Potentially emit an event for the page to observe since
+								// Wake Lock releases happen when page visibility changes.
+								// (https://web.dev/wakelock/#wake-lock-lifecycle)
+								console.log("Wake Lock released.");
+							});
+						})
+						.catch(function (err) {
+							_this2.enabled = false;
+							console.error(err.name + ", " + err.message);
+							throw err;
+						});
+				} else if (oldIOS()) {
+					this.disable();
+					console.warn(
+						"\n        NoSleep enabled for older iOS devices. This can interrupt\n        active or long-running network requests from completing successfully.\n        See https://github.com/richtr/NoSleep.js/issues/15 for more details.\n      "
+					);
+					this.noSleepTimer = window.setInterval(function () {
+						if (!document.hidden) {
+							window.location.href = window.location.href.split("#")[0];
+							window.setTimeout(window.stop, 0);
+						}
+					}, 15000);
+					this.enabled = true;
+					return Promise.resolve();
+				} else {
+					var playPromise = this.noSleepVideo.play();
+					return playPromise
+						.then(function (res) {
+							_this2.enabled = true;
+							return res;
+						})
+						.catch(function (err) {
+							_this2.enabled = false;
+							throw err;
+						});
+				}
+			},
+		},
+		{
+			key: "disable",
+			value: function disable() {
+				if (nativeWakeLock()) {
+					if (this._wakeLock) {
+						this._wakeLock.release();
+					}
+					this._wakeLock = null;
+				} else if (oldIOS()) {
+					if (this.noSleepTimer) {
+						console.warn(
+							"\n          NoSleep now disabled for older iOS devices.\n        "
+						);
+						window.clearInterval(this.noSleepTimer);
+						this.noSleepTimer = null;
+					}
+				} else {
+					this.noSleepVideo.pause();
+				}
+				this.enabled = false;
+			},
+		},
+		{
+			key: "isEnabled",
+			get: function get() {
+				return this.enabled;
+			},
+		},
+	]);
+
+	return NoSleep;
+})();
+var noSleep = new NoSleep();
 
 async function acquireLock() {
- wakeLock = await navigator.wakeLock.request("screen");
- console.log(" Wake Lock is acquired");
-
- wakeLock.addEventListener('release', () => {
-   console.log('Wake Lock is released');
- });
+noSleep.enable();
+ console.log(" no sleep enabled");
 }
 
 function releaseLock() {
-   wakeLock.release().then(() => {
-	console.log("Wake Lock Released");
-   });
+	noSleep.disable();
+	console.log(" no sleep disabled");
 }
